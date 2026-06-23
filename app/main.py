@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.routes import health
 from app.routes import debug
 from app.routes import rag
+from app.routes import incident
 
 # Import application settings and logger utilities
 # - `settings` centralizes environment-driven configuration
@@ -34,6 +35,7 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(debug.router)
 app.include_router(rag.router)
+app.include_router(incident.router)
 
 init_exception_handlers(app)
 
