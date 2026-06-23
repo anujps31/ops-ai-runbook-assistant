@@ -1,0 +1,11 @@
+Production API returning 503 errors.
+
+Symptoms:
+- Customers unable to login
+- Increased latency
+- Multiple pods restarting
+
+Initial Findings:
+Ingress healthy
+Pods restarting
+Database healthy
