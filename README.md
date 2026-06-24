@@ -149,42 +149,6 @@ streamlit run app.py --server.port=8501
 
 ---
 
-## 🐳 Docker Deployment
-
-### Build and Run with Docker Compose
-
-```bash
-# Build images
-docker-compose build
-
-# Start services
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f api
-docker-compose logs -f ui
-```
-
-### Single Container Build
-
-```bash
-# Build image
-docker build -t ops-ai-runbook:latest .
-
-# Run container (FastAPI only)
-docker run -d \
-  -p 8000:8000 \
-  -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
-  -v $(pwd)/data:/app/data \
-  --name ops-ai-api \
-  ops-ai-runbook:latest
-
-# Access API
-curl http://localhost:8000/health
-```
-
----
-
 ## 📚 API Endpoints
 
 ### Health & Metrics
