@@ -1,4 +1,5 @@
 import requests
+from requests.exceptions import ReadTimeout, RequestException
 
 from app.utils.logger import get_logger
 from app.utils.config import settings
@@ -10,7 +11,8 @@ OLLAMA_GENERATE_URL = f"{settings.OLLAMA_BASE_URL}/api/generate"
 
 LLM_MODEL = "qwen3:8b"
 
-REQUEST_TIMEOUT = 120
+REQUEST_TIMEOUT = 300
+MAX_RETRIES = 2
 
 
 class LLMService:
@@ -27,7 +29,7 @@ class LLMService:
         try:
             response = requests.get(
                 self.tags_url,
-                timeout=REQUEST_TIMEOUT
+                timeout=(10, 30)
             )
 
             response.raise_for_status()
@@ -64,31 +66,33 @@ class LLMService:
                 f"Generating response using model: {LLM_MODEL}"
             )
 
-            response = requests.post(
-                self.generate_url,
-                json=payload,
-                timeout=REQUEST_TIMEOUT
-            )
-
-            response.raise_for_status()
-
-            data = response.json()
-
-            answer = data.get(
-                "response",
-                ""
-            )
-
-            logger.info(
-                "Response generated successfully"
-            )
-
-            return answer
+            attempts = 0
+            while attempts <= MAX_RETRIES:
+                try:
+                    response = requests.post(
+                        self.generate_url,
+                        json=payload,
+                        timeout=(20, REQUEST_TIMEOUT),
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    answer = data.get("response", "")
+                    logger.info("Response generated successfully")
+                    return answer
+                except ReadTimeout as timeout_exc:
+                    attempts += 1
+                    logger.warning(
+                        "Ollama request timed out (attempt %s/%s): %s",
+                        attempts,
+                        MAX_RETRIES,
+                        timeout_exc,
+                    )
+                    if attempts > MAX_RETRIES:
+                        raise
+                except RequestException as req_exc:
+                    logger.exception("LLM request failed: %s", req_exc)
+                    raise
 
         except Exception as ex:
-            logger.exception(
-                "LLM generation failed: %s",
-                str(ex)
-            )
-
+            logger.exception("LLM generation failed: %s", str(ex))
             return ""

@@ -54,31 +54,53 @@ async def root():
     }
 
 
+from app.services.llm_service import LLMService
+from app.services.chroma_service import ChromaService
+
+
 @app.on_event("startup")
 async def on_startup() -> None:
-    """
-    Startup event handler
-
-    Log startup information such as application name, version, and the
-    configured Ollama URL. Startup logging is useful because:
-      - It records the exact configuration used when the process started
-      - Helps correlate logs to a specific deployment/version
-      - Makes debugging easier when multiple instances/environments exist
-    """
-    # Log basic application metadata for observability and debugging
     logger.info("Starting application: %s", settings.APP_NAME)
     logger.info("Version: %s", settings.APP_VERSION)
-    # Log external dependency endpoints so operators can verify configuration
     logger.info("Ollama base URL: %s", settings.OLLAMA_BASE_URL)
+
+    ollama = LLMService()
+    if ollama.verify_connection():
+        logger.info("Ollama verification succeeded")
+    else:
+        logger.error("Ollama verification failed on startup")
+
+    try:
+        chroma = ChromaService()
+        logger.info("ChromaDB verification succeeded, document count=%s", chroma.count())
+    except Exception as ex:
+        logger.exception("ChromaDB verification failed: %s", ex)
+
+
+@app.get("/health")
+async def health_check():
+    logger.info("/health endpoint called")
+    return {
+        "status": "healthy",
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+    }
+
+
+@app.get("/metrics")
+async def metrics():
+    logger.info("/metrics endpoint called")
+    return {
+        "status": "ok",
+        "app_version": settings.APP_VERSION,
+        "ollama_url": settings.OLLAMA_BASE_URL,
+    }
 
 
 # Entry point for running the application directly (development convenience)
 if __name__ == "__main__":
-    # uvicorn is required to run this server
-    # Production deployments should run uvicorn/gunicorn from process manager
     import uvicorn
 
-    # Run using configured host/port when available; fallback to defaults
     host = getattr(settings, "HOST", "0.0.0.0")
     port = getattr(settings, "PORT", 8000)
 
@@ -86,5 +108,5 @@ if __name__ == "__main__":
         "app.main:app",
         host=host,
         port=port,
-        reload=True,  # Auto-reload on code changes (development only)
+        reload=True,
     )
