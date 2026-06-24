@@ -93,7 +93,7 @@ An intelligent automation system combining FastAPI, Streamlit, Ollama LLM, Chrom
 
 #### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-org/ops-ai-runbook-assistant.git
+git clone https://github.com/anujps31/ops-ai-runbook-assistant.git
 cd ops-ai-runbook-assistant
 ```
 
