@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ops-ai-api
+    environment:
+      - SERVICE=api
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LOG_LEVEL=INFO
+      - HOST=0.0.0.0
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./app:/app/app
+      - ./logs:/app/logs
+    depends_on:
+      - ollama
+    networks:
+      - ops-ai-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Streamlit UI Service
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ops-ai-ui
+    environment:
+      - SERVICE=ui
+      - OLLAMA_BASE_URL=http://ollama:11434
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./ui:/app/ui
+      - ./logs:/app/logs
+    depends_on:
+      - api
+    networks:
+      - ops-ai-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Ollama LLM Service
+  # Note: Requires GPU support or significant RAM (8GB+ recommended for qwen3:8b)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ops-ai-ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - ops-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ops-ai-network:
+    driver: bridge
+
+volumes:
+  ollama-data:
+    driver: local
